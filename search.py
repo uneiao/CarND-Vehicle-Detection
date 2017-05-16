@@ -1,14 +1,5 @@
-import matplotlib.image as mpimg
-import matplotlib.pyplot as plt
 import numpy as np
 import cv2
-import glob
-import time
-from sklearn.svm import LinearSVC
-from sklearn.preprocessing import StandardScaler
-from skimage.feature import hog
-from lesson_functions import *
-from sklearn.cross_validation import train_test_split
 
 
 def slide_window(img, x_start_stop=[None, None], y_start_stop=[None, None],
@@ -64,7 +55,7 @@ def draw_boxes(img, bboxes, color=(0, 0, 255), thick=6):
     return imcopy
 
 
-def search_windows(img, windows, clf, scaler, feature_func):
+def search_windows(img, windows, model, scaler, feature_func):
     #1) Create an empty list to receive positive detection windows
     on_windows = []
     #2) Iterate over all windows in the list
@@ -76,7 +67,7 @@ def search_windows(img, windows, clf, scaler, feature_func):
         #5) Scale extracted features to be fed to classifier
         test_features = scaler.transform(np.array(features).reshape(1, -1))
         #6) Predict using your classifier
-        prediction = clf.predict(test_features)
+        prediction = model.predict(test_features)
         #7) If positive (prediction == 1) then save the window
         if prediction == 1:
             on_windows.append(window)

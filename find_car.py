@@ -1,8 +1,7 @@
-import matplotlib.image as mpimg
-import matplotlib.pyplot as plt
 import numpy as np
 import pickle
 import cv2
+"""
 from lesson_functions import *
 
 dist_pickle = pickle.load( open("svc_pickle.p", "rb" ) )
@@ -89,3 +88,92 @@ scale = 1.5
 out_img = find_cars(img, ystart, ystop, scale, svc, X_scaler, orient, pix_per_cell, cell_per_block, spatial_size, hist_bins)
 
 plt.imshow(out_img)
+"""
+
+
+import train
+
+
+class VehicleTrack():
+    def __init__(self):
+        self._model = None
+        self._scaler = None
+        pass
+
+    def save_image(self, name, image):
+        pass
+
+    def get_model_and_scaler(self):
+        self._model = train.load_svc_model()
+        self._scaler = train.load_scaler()
+
+    def find_cars_in_image(self, img, ystart=360, ystop=720, pix_per_cell=8, cell_per_block=8):
+        draw_img = np.copy(img)
+        img = img.astype(np.float32)/255
+
+        img_tosearch = img[ystart:ystop,:,:]
+        height, width, _ = img_tosearch.shape
+
+        # Define blocks and steps as above
+        nxblocks = (width // pix_per_cell) - cell_per_block + 1
+        nyblocks = (height // pix_per_cell) - cell_per_block + 1
+        #nfeat_per_block = orient*cell_per_block**2
+
+        # 64 was the orginal sampling rate, with 8 cells and 8 pix per cell
+        window = 64
+        nblocks_per_window = (window // pix_per_cell) - cell_per_block + 1
+        cells_per_step = 2  # Instead of overlap, define how many cells to step
+        nxsteps = (nxblocks - nblocks_per_window) // cells_per_step
+        nysteps = (nyblocks - nblocks_per_window) // cells_per_step
+
+        for xb in range(nxsteps):
+            for yb in range(nysteps):
+                ypos = yb*cells_per_step
+                xpos = xb*cells_per_step
+
+                xleft = xpos*pix_per_cell
+                ytop = ypos*pix_per_cell
+
+                # Extract the image patch
+                subimg = cv2.resize(img_tosearch[ytop:ytop+window, xleft:xleft+window], (64, 64))
+
+                # Scale features and make a prediction
+                test_features = self._scaler.transform(train.FEATURE_(subimg).reshape(1, -1))
+                test_prediction = self._model.predict(test_features)
+
+                scale = 1
+                xbox_left = np.int(xleft*scale)
+                ytop_draw = np.int(ytop*scale)
+                win_draw = np.int(window*scale)
+                cv2.rectangle(draw_img,
+                    (xbox_left, ytop_draw+ystart),
+                    (xbox_left+win_draw, ytop_draw+win_draw+ystart),
+                    (0,0,255), 6)
+                cv2.imshow("findcar", draw_img)
+                cv2.waitKey()
+
+                if test_prediction == 1:
+                    print(ytop, ytop+window, xleft, xleft+window)
+                    xbox_left = np.int(xleft*scale)
+                    ytop_draw = np.int(ytop*scale)
+                    win_draw = np.int(window*scale)
+                    cv2.rectangle(draw_img,
+                        (xbox_left, ytop_draw+ystart),
+                        (xbox_left+win_draw, ytop_draw+win_draw+ystart),
+                        (0,0,255), 6)
+
+        cv2.imshow("findcar", draw_img)
+        cv2.waitKey()
+
+    def process_image(self):
+        self.get_model_and_scaler()
+        image = cv2.imread("test_images/test3.jpg")
+        self.find_cars_in_image(image)
+
+    def process_video(self):
+        pass
+
+
+if __name__ == "__main__":
+    vt = VehicleTrack()
+    vt.process_image()

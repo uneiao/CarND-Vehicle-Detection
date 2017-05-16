@@ -55,7 +55,7 @@ def extract_features(imgs, color_space="RGB", spatial_size=(32, 32),
     for file in imgs:
         file_features = []
         # Read in each one by one
-        image = mpimg.imread(file)
+        image = cv2.imread(file)
         # apply color conversion if other than "RGB"
         if color_space != "RGB":
             if color_space == "HSV":
@@ -139,6 +139,10 @@ def single_img_features(img, color_space="RGB", spatial_size=(32, 32),
                 hog_features.extend(get_hog_features(feature_image[:,:,channel],
                                     orient, pix_per_cell, cell_per_block,
                                     vis=False, feature_vec=True))
+        elif hog_channel == "GRAY":
+            feature_image = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
+            hog_features = get_hog_features(feature_image, orient,
+                        pix_per_cell, cell_per_block, vis=False, feature_vec=True)
         else:
             hog_features = get_hog_features(feature_image[:,:,hog_channel], orient,
                         pix_per_cell, cell_per_block, vis=False, feature_vec=True)
