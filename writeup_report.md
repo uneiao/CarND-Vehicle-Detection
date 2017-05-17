@@ -105,11 +105,11 @@ The related code is in file `heat_map.py`.
 
 #### 1. Briefly discuss any problems / issues you faced in your implementation of this project.  Where will your pipeline likely fail?  What could you do to make it more robust?
 
-There are still some false positive cases from the processed video.
+There are still some false positive cases in the processed video.
 The noises could be caused by dirty road surface and fences, etc.
 I believe a stronger classifier such as well-trained CNN structure would help a lot for robustness.
-Maybe some method like Kalman Filter can help to filter out several false positives by
-statistics over nearby frames.
+Maybe some method like Kalman Filter can help to filter out false positives by
+using tracking over nearby frames and make proper predictions, then BBoxes can be restricted within the given prediction.
 
 Sometimes the bounding boxes flicker in the result video.
 For further improvement, I would like to try a Gaussian mixture model to fit the heatmap

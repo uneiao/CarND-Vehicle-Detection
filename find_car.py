@@ -113,9 +113,9 @@ class VehicleTrack():
 
     def multi_scale_search(self, image, draw=False):
         search_scale_settings = [
-            ([None, None], [400, 470], (64, 64), (0.75, 0.75)),
-            ([None, None], [410, 520], (96, 96), (0.75, 0.75)),
-            ([None, None], [420, 660], (128, 128), (0.75, 0.75)),
+            ([None, None], [400, 480], (64, 64), (0.75, 0.75)),
+            ([None, None], [405, 540], (96, 96), (0.75, 0.75)),
+            ([None, None], [410, 660], (128, 128), (0.75, 0.75)),
         ]
         if draw:
             draw_image = np.copy(image)
@@ -140,5 +140,5 @@ class VehicleTrack():
 
 if __name__ == "__main__":
     vt = VehicleTrack()
-    #vt.process_image()
-    vt.process_video("project_video.mp4")
+    vt.process_image()
+    #vt.process_video("project_video.mp4")
