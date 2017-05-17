@@ -45,14 +45,12 @@ def slide_window(img, x_start_stop=[None, None], y_start_stop=[None, None],
 
 
 def draw_boxes(img, bboxes, color=(0, 0, 255), thick=6):
-    # Make a copy of the image
-    imcopy = np.copy(img)
     # Iterate through the bounding boxes
     for bbox in bboxes:
         # Draw a rectangle given bbox coordinates
-        cv2.rectangle(imcopy, bbox[0], bbox[1], color, thick)
+        cv2.rectangle(img, bbox[0], bbox[1], color, thick)
     # Return the image copy with boxes drawn
-    return imcopy
+    return img
 
 
 def search_windows(img, windows, model, scaler, feature_func):
@@ -73,4 +71,3 @@ def search_windows(img, windows, model, scaler, feature_func):
             on_windows.append(window)
     #8) Return windows for positive detections
     return on_windows
-

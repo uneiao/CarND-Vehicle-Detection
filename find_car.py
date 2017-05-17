@@ -1,96 +1,14 @@
+#! /usr/bin/python
+# -*- coding:utf8 -*-
+
+
+import glob
 import numpy as np
-import pickle
 import cv2
-"""
-from lesson_functions import *
+from moviepy.editor import VideoFileClip
 
-dist_pickle = pickle.load( open("svc_pickle.p", "rb" ) )
-svc = dist_pickle["svc"]
-X_scaler = dist_pickle["scaler"]
-orient = dist_pickle["orient"]
-pix_per_cell = dist_pickle["pix_per_cell"]
-cell_per_block = dist_pickle["cell_per_block"]
-spatial_size = dist_pickle["spatial_size"]
-hist_bins = dist_pickle["hist_bins"]
-
-img = mpimg.imread('test_image.jpg')
-
-# Define a single function that can extract features using hog sub-sampling and make predictions
-def find_cars(img, ystart, ystop, scale, svc, X_scaler, orient, pix_per_cell, cell_per_block, spatial_size, hist_bins):
-
-    draw_img = np.copy(img)
-    img = img.astype(np.float32)/255
-
-    img_tosearch = img[ystart:ystop,:,:]
-    ctrans_tosearch = convert_color(img_tosearch, conv='RGB2YCrCb')
-    if scale != 1:
-        imshape = ctrans_tosearch.shape
-        ctrans_tosearch = cv2.resize(ctrans_tosearch, (np.int(imshape[1]/scale), np.int(imshape[0]/scale)))
-
-    ch1 = ctrans_tosearch[:,:,0]
-    ch2 = ctrans_tosearch[:,:,1]
-    ch3 = ctrans_tosearch[:,:,2]
-
-    # Define blocks and steps as above
-    nxblocks = (ch1.shape[1] // pix_per_cell) - cell_per_block + 1
-    nyblocks = (ch1.shape[0] // pix_per_cell) - cell_per_block + 1
-    nfeat_per_block = orient*cell_per_block**2
-
-    # 64 was the orginal sampling rate, with 8 cells and 8 pix per cell
-    window = 64
-    nblocks_per_window = (window // pix_per_cell) - cell_per_block + 1
-    cells_per_step = 2  # Instead of overlap, define how many cells to step
-    nxsteps = (nxblocks - nblocks_per_window) // cells_per_step
-    nysteps = (nyblocks - nblocks_per_window) // cells_per_step
-
-    # Compute individual channel HOG features for the entire image
-    hog1 = get_hog_features(ch1, orient, pix_per_cell, cell_per_block, feature_vec=False)
-    hog2 = get_hog_features(ch2, orient, pix_per_cell, cell_per_block, feature_vec=False)
-    hog3 = get_hog_features(ch3, orient, pix_per_cell, cell_per_block, feature_vec=False)
-
-    for xb in range(nxsteps):
-        for yb in range(nysteps):
-            ypos = yb*cells_per_step
-            xpos = xb*cells_per_step
-            # Extract HOG for this patch
-            hog_feat1 = hog1[ypos:ypos+nblocks_per_window, xpos:xpos+nblocks_per_window].ravel()
-            hog_feat2 = hog2[ypos:ypos+nblocks_per_window, xpos:xpos+nblocks_per_window].ravel()
-            hog_feat3 = hog3[ypos:ypos+nblocks_per_window, xpos:xpos+nblocks_per_window].ravel()
-            hog_features = np.hstack((hog_feat1, hog_feat2, hog_feat3))
-
-            xleft = xpos*pix_per_cell
-            ytop = ypos*pix_per_cell
-
-            # Extract the image patch
-            subimg = cv2.resize(ctrans_tosearch[ytop:ytop+window, xleft:xleft+window], (64,64))
-
-            # Get color features
-            spatial_features = bin_spatial(subimg, size=spatial_size)
-            hist_features = color_hist(subimg, nbins=hist_bins)
-
-            # Scale features and make a prediction
-            test_features = X_scaler.transform(np.hstack((spatial_features, hist_features, hog_features)).reshape(1, -1))
-            #test_features = X_scaler.transform(np.hstack((shape_feat, hist_feat)).reshape(1, -1))
-            test_prediction = svc.predict(test_features)
-
-            if test_prediction == 1:
-                xbox_left = np.int(xleft*scale)
-                ytop_draw = np.int(ytop*scale)
-                win_draw = np.int(window*scale)
-                cv2.rectangle(draw_img,(xbox_left, ytop_draw+ystart),(xbox_left+win_draw,ytop_draw+win_draw+ystart),(0,0,255),6)
-
-    return draw_img
-
-ystart = 400
-ystop = 656
-scale = 1.5
-
-out_img = find_cars(img, ystart, ystop, scale, svc, X_scaler, orient, pix_per_cell, cell_per_block, spatial_size, hist_bins)
-
-plt.imshow(out_img)
-"""
-
-
+import heat_map
+import search
 import train
 
 
@@ -98,6 +16,7 @@ class VehicleTrack():
     def __init__(self):
         self._model = None
         self._scaler = None
+        self._heat_tracking = None
         pass
 
     def save_image(self, name, image):
@@ -109,7 +28,6 @@ class VehicleTrack():
 
     def find_cars_in_image(self, img, ystart=360, ystop=720, pix_per_cell=8, cell_per_block=8):
         draw_img = np.copy(img)
-        img = img.astype(np.float32)/255
 
         img_tosearch = img[ystart:ystop,:,:]
         height, width, _ = img_tosearch.shape
@@ -141,19 +59,8 @@ class VehicleTrack():
                 test_features = self._scaler.transform(train.FEATURE_(subimg).reshape(1, -1))
                 test_prediction = self._model.predict(test_features)
 
-                scale = 1
-                xbox_left = np.int(xleft*scale)
-                ytop_draw = np.int(ytop*scale)
-                win_draw = np.int(window*scale)
-                cv2.rectangle(draw_img,
-                    (xbox_left, ytop_draw+ystart),
-                    (xbox_left+win_draw, ytop_draw+win_draw+ystart),
-                    (0,0,255), 6)
-                cv2.imshow("findcar", draw_img)
-                cv2.waitKey()
-
                 if test_prediction == 1:
-                    print(ytop, ytop+window, xleft, xleft+window)
+                    scale = 1
                     xbox_left = np.int(xleft*scale)
                     ytop_draw = np.int(ytop*scale)
                     win_draw = np.int(window*scale)
@@ -167,13 +74,71 @@ class VehicleTrack():
 
     def process_image(self):
         self.get_model_and_scaler()
-        image = cv2.imread("test_images/test3.jpg")
-        self.find_cars_in_image(image)
+        import matplotlib.pyplot as plt
+        import pylab
+        fig = plt.figure()
+        ind = 231
+        for image_path in glob.glob("test_images/*.jpg"):
+            image = cv2.imread(image_path)
+            windows = self.multi_scale_search(image)
+            draw_img = search.draw_boxes(image, windows)
+            name = image_path.split("/")[1].split(".")[0]
+            cv2.imwrite("%s_output.jpg" % name, draw_img)
+            self._heat_tracking = None
+            plt.subplot(ind)
+            plt.imshow(cv2.cvtColor(image, cv2.COLOR_RGB2BGR), cmap="gray")
+            plt.title("%s_output.jpg" % name)
+            ind += 1
+        pylab.show()
 
-    def process_video(self):
-        pass
+    def process_video(self, video_file_path):
+        self.get_model_and_scaler()
+        def process_image(image):
+            image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+            windows = self.multi_scale_search(image)
+            if self._heat_tracking is None:
+                self._heat_tracking = heat_map.HeatTracking(
+                    (image.shape[0], image.shape[1]),
+                    weight_decayed=0.5,
+                    threshold=0.6)
+            self._heat_tracking.add_heat_frame(windows)
+            labels = self._heat_tracking.get_heats_label()
+            draw_img = heat_map.draw_labeled_bboxes(image, labels)
+            draw_img = cv2.cvtColor(draw_img, cv2.COLOR_RGB2BGR)
+            return draw_img
+        video_output = "%s_output.mp4" % video_file_path.split(".")[0]
+        clip1 = VideoFileClip(video_file_path)
+        _clip = clip1.fl_image(process_image)
+        _clip.write_videofile(video_output, audio=False)
+
+    def multi_scale_search(self, image, draw=False):
+        search_scale_settings = [
+            ([None, None], [400, 470], (64, 64), (0.75, 0.75)),
+            ([None, None], [410, 520], (96, 96), (0.75, 0.75)),
+            ([None, None], [420, 660], (128, 128), (0.75, 0.75)),
+        ]
+        if draw:
+            draw_image = np.copy(image)
+        match_windows = []
+        for x_start_stop, y_start_stop, xy_window, xy_overlap in search_scale_settings:
+            windows = search.slide_window(
+                image, x_start_stop=x_start_stop, y_start_stop=y_start_stop,
+                xy_window=xy_window, xy_overlap=xy_overlap)
+
+            hot_windows = search.search_windows(image, windows, self._model, self._scaler, train.FEATURE_)
+            match_windows.extend(hot_windows)
+
+            if draw:
+                window_img = search.draw_boxes(draw_image, hot_windows, color=(0, 0, 255), thick=2)
+
+        if draw:
+            cv2.imshow("multi_scale", window_img)
+            cv2.waitKey()
+
+        return match_windows
 
 
 if __name__ == "__main__":
     vt = VehicleTrack()
-    vt.process_image()
+    #vt.process_image()
+    vt.process_video("project_video.mp4")
